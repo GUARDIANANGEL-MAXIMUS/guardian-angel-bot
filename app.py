@@ -5,8 +5,8 @@ import os
 # Initialize Flask app
 app = Flask(__name__)
 
-# Bot configuration
-BOT_TOKEN = "7934553609:AAE_FN9vh0zoEfuY2U5evy74SPHy4S3HnPk"
+# Bot configuration - Get token from environment variable
+BOT_TOKEN = os.environ.get('BOT_TOKEN')
 bot = telebot.TeleBot(BOT_TOKEN)
 
 # Webhook route
