@@ -5,16 +5,28 @@ import os
 # Initialize Flask app
 app = Flask(__name__)
 
-# Bot configuration - Get token from environment variable
-BOT_TOKEN = os.environ.get('BOT_TOKEN')
+# Bot configuration
+BOT_TOKEN = os.getenv('BOT_TOKEN')
+if not BOT_TOKEN:
+    raise ValueError("No BOT_TOKEN provided!")
+
+# Initialize bot
 bot = telebot.TeleBot(BOT_TOKEN)
 
+# Simple route
+@app.route('/')
+def home():
+    return 'Bot is running'
+
 # Webhook route
-@app.route('/' + BOT_TOKEN, methods=['POST'])
+@app.route(f'/{BOT_TOKEN}', methods=['POST'])
 def webhook():
-    update = telebot.types.Update.de_json(request.stream.read().decode('utf-8'))
-    bot.process_new_updates([update])
-    return 'OK'
+    if request.headers.get('content-type') == 'application/json':
+        json_string = request.get_data().decode('utf-8')
+        update = telebot.types.Update.de_json(json_string)
+        bot.process_new_updates([update])
+        return 'OK', 200
+    return 'Bad Request', 400
 
 # Handle /start command
 @bot.message_handler(commands=['start'])
@@ -26,52 +38,34 @@ I can help you with:
 • NFT Collection Details
 • $ANGEL Token Information
 • Distribution System
-• Official Channels
-
-What would you like to know about?"""
+• Official Channels"""
     bot.reply_to(message, response)
 
-# Handle specific keywords
+# Handle all messages
 @bot.message_handler(func=lambda message: True)
-def handle_message(message):
-    text = message.text.lower()
-    
-    if 'nft' in text:
-        response = """🎨 Guardian Angel NFT Collection:
+def echo_message(message):
+    try:
+        text = message.text.lower()
+        if 'nft' in text:
+            response = """🎨 Guardian Angel NFT Collection:
 • Limited edition NFTs
 • Exclusive holder benefits
-• Part of Guardian Angel ecosystem
-• Special utilities for holders"""
-    
-    elif 'token' in text or 'angel' in text:
-        response = """💎 $ANGEL Token:
-• Native token of Guardian Angel
-• Built on SUI blockchain
-• Used for governance and utilities
-• Staking benefits available"""
-    
-    elif 'distribution' in text:
-        response = """📊 Token Distribution:
-• Fair launch mechanism
-• Community-focused allocation
-• Staking rewards
-• NFT holder benefits"""
-    
-    else:
-        response = """I can tell you about:
-• NFT Collection
-• $ANGEL Token
-• Distribution
-• Official Channels
-
-Just ask about any of these topics!"""
-    
-    bot.reply_to(message, response)
-
-# Health check route
-@app.route('/')
-def health():
-    return 'Guardian Angel Bot is running!'
+• Part of ecosystem
+• Special utilities"""
+        elif 'token' in text:
+            response = """💎 $ANGEL Token:
+• Native token
+• Built on SUI
+• Governance & utilities
+• Staking benefits"""
+        else:
+            response = "Ask me about NFTs or tokens!"
+        bot.reply_to(message, response)
+    except Exception as e:
+        print(f"Error in message handler: {e}")
+        bot.reply_to(message, "I'm processing your request...")
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    # Start Flask app
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
